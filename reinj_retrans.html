@@ -1,0 +1,61 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+  </style>
+</head>
+<body>
+<h1 id="reinjections-and-retransmissions">Reinjections and Retransmissions</h1>
+<p><strong>Graph file</strong>: <a href="https://github.com/multipath-tcp/mptcp-analysis-scripts/blob/master/scripts_graph/overhead_retrans_reinj.py">overhead_retrans_reinj.py</a><br /><strong>Main fields</strong>:</p>
+<pre class="sourceCode python"><code class="sourceCode python">conn.flows[*].attr[co.S2C].get[co.BYTES]  <span class="co"># Unique data bytes sent on a subflow from proxy to smartphone</span>
+conn.flows[*].attr[co.S2C].get[co.BYTES_RETRANS]  <span class="co"># Retransmitted bytes on a subflow from proxy to smartphone</span>
+conn.flows[*].attr[co.S2C].get[co.REINJ_ORIG_BYTES]  <span class="co"># Reinjected bytes of data originally sent on a subflow from proxy to smartphone</span></code></pre>
+<p>The way to obtain these results can be summarized by the following code.</p>
+<pre class="sourceCode python"><code class="sourceCode python"><span class="kw">for</span> conn_id, conn in data.iteritems():
+  <span class="co"># Initialize retrans_bytes, reinj_data_bytes and total_data_bytes to 0</span>
+
+  <span class="co"># Only consider connection using at least two subflows</span>
+  nb_flows = <span class="dv">0</span>
+  <span class="kw">for</span> flow_id, flow in conn.flows.iteritems():
+    <span class="kw">if</span> flow.attr[co.S2C].get(co.BYTES, <span class="dv">0</span>) &gt; <span class="dv">0</span>:
+      nb_flows += <span class="dv">1</span>
+
+  <span class="kw">if</span> nb_flows &lt; <span class="dv">2</span>:
+    <span class="kw">continue</span>
+
+  <span class="co"># Count the number of retransmissions and reinjections</span>
+  <span class="kw">for</span> flow_id, flow in conn.flows.iteritems():
+    retrans_bytes += flow.attr[co.S2C][co.BYTES_RETRANS]
+    reinj_data_bytes += flow.attr[co.S2C][co.REINJ_ORIG_BYTES]
+    total_data_bytes += flow.attr[co.S2C][co.BYTES]
+
+  <span class="co"># The result for retransmissions is the ratio retransmissions / unique bytes</span>
+  results[RETRANS].append((retrans_bytes + <span class="fl">0.0</span>) / total_data_bytes)
+  <span class="co"># The result for reinjections is the ratio reinjections / unique bytes</span>
+  results[REINJ].append((reinj_data_bytes + <span class="fl">0.0</span>) / total_data_bytes)</code></pre>
+<h3 id="additional-information">Additional information</h3>
+<p>To avoid under-estimating the overhead of reinjection, only connections using at least two subflows are considered (i.e., there is at least one data byte on two different subflows).<br />The retransmission values are computed by <a href="http://tstat.polito.it/">tstat</a> whereas the reinjections values come from a post-processing of <a href="https://bitbucket.org/bhesmans/mptcptrace">mptcptrace</a> described in the <a href="https://github.com/multipath-tcp/mptcp-analysis-scripts/blob/master/mptcp.py#L200">method <code>process_csv</code> in the file <code>mptcp.py</code></a>.</p>
+</body>
+</html>

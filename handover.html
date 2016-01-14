@@ -1,0 +1,69 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+  </style>
+</head>
+<body>
+<h1 id="handover-count">Handover count</h1>
+<p><strong>Graph file</strong>: <a href="https://github.com/multipath-tcp/mptcp-analysis-scripts/blob/master/scripts_graph/not_initial_subflow_data_handover_cdf.py">not_initial_subflow_data_handover_cdf.py</a><br /><strong>Main fields</strong>:</p>
+<pre class="sourceCode python"><code class="sourceCode python">conn.flows[*].attr[direction][co.DATA_BYTES]  <span class="co"># Number of total bytes seen by tstat</span>
+conn.flows[*].attr[co.S2C][co.TIME_LAST_ACK_TCP]  <span class="co"># Time of last ACK from smartphone</span>
+conn.flows[*].attr[co.S2C][co.TIME_FIN_ACK_TCP]  <span class="co"># Time of FIN from smartphone (or 0 if no FIN)</span>
+conn.flows[*].attr[direction][co.TIME_LAST_PAYLD_TCP]  <span class="co"># Time of the last payload</span></code></pre>
+<p>Formally, a data handover is defined as following.<br />Let LA_i be the time of the last (non-RST) ACK sent by the smartphone seen on the subflow i (that was used to send data) and LP_j the time of the last (non-retransmitted) segment containing data on subflow j.<br />If it exist k, l such that k != l, no FIN seen from the smartphone on subflow k, LA_l &gt; LA_k and LP_l &gt; LA_k, then the connection experience handover.</p>
+<p>Programmatically, this definition can be translated like this.</p>
+<pre class="sourceCode python"><code class="sourceCode python"><span class="co"># Suppose conns contains connections using at least 2 SFs</span>
+<span class="kw">for</span> conn_id, conn in conns.iteritems():
+  handover_detected = <span class="ot">False</span>
+
+  <span class="co"># Preprocessing</span>
+  initial_sf_ts = <span class="dt">float</span>(<span class="st">&#39;inf&#39;</span>)
+  min_last_ack = <span class="dt">float</span>(<span class="st">&#39;inf&#39;</span>)
+  <span class="kw">for</span> flow_id, flow in conn.flows.iteritems():
+    flow_bytes = <span class="dv">0</span>
+    <span class="kw">for</span> direction in co.DIRECTIONS:
+      flow_bytes += flow.attr[direction].get[co.BYTES_DATA]
+    <span class="kw">if</span> (flow_bytes &gt; <span class="dv">0</span>  <span class="co"># Flow used</span>
+        and flow.attr[co.S2C][co.TIME_LAST_ACK_TCP].total_seconds() &gt; <span class="fl">0.0</span>  <span class="co"># ACK from the smartphone</span>
+        and flow.attr[co.S2C][co.TIME_FIN_ACK_TCP].total_seconds() == <span class="fl">0.0</span>):  <span class="co"># No FIN from the smartphone</span>
+      min_last_ack = <span class="dt">min</span>(min_last_ack, flow.attr[co.S2C][co.TIME_LAST_ACK_TCP].total_seconds())
+
+  <span class="co"># Handover detection</span>
+  <span class="kw">for</span> flow_id, flow in conn.flows.iteritems():
+    max_last_payload = <span class="dv">0</span> - <span class="dt">float</span>(<span class="st">&#39;inf&#39;</span>)
+    <span class="kw">if</span> flow.attr[co.C2S][co.BYTES] &gt; <span class="dv">0</span> or flow.attr[co.S2C][co.BYTES] &gt; <span class="dv">0</span>:  <span class="co"># Flow used</span>
+      <span class="kw">if</span> flow.attr[co.S2C][co.TIME_LAST_ACK_TCP].total_seconds() &gt; min_last_ack:  <span class="co"># LA_l &gt; LA_k</span>
+        max_last_payload = <span class="dt">max</span>([flow.attr[direction][co.TIME_LAST_PAYLD_TCP].total_seconds() <span class="kw">for</span> direction in co.DIRECTIONS])
+
+    handover_delta = max_last_payload - min_last_ack  <span class="co"># LP_l - LA_k</span>
+    <span class="kw">if</span> handover_delta &gt; <span class="fl">0.0</span>:  <span class="co"># LP_l &gt; LA_k</span>
+      <span class="co"># A subflow is used after the last ack of the client seen --&gt; Handover</span>
+      handover_detected = <span class="ot">True</span></code></pre>
+<h3 id="additional-information">Additional information</h3>
+<p>Since handover could only happen when at least two subflows are used, the percentage of connections experiencing handover is based on the number of connections using at least two subflows.<br />The times were computed either by <a href="http://tstat.polito.it/">tstat</a> or by our analysis scripts <a href="https://github.com/multipath-tcp/mptcp-analysis-scripts/blob/master/tcp.py#L790">here</a>.</p>
+<p>In the graph file, the number of missing <code>ADD_ADDR</code>s and <code>REMOVE_ADDR</code>s are also computed.<br />The collection of <code>ÀDD_ADDR</code> and <code>REMOVE_ADDR</code> is made by the analysis script by post-processing the output of <a href="https://bitbucket.org/bhesmans/mptcptrace">mptcptrace</a> in methods <a href="https://github.com/multipath-tcp/mptcp-analysis-scripts/blob/master/mptcp.py#L520"><code>process_add_addr_csv</code></a> and <a href="https://github.com/multipath-tcp/mptcp-analysis-scripts/blob/master/mptcp.py#L532"><code>process_rm_addr_csv</code></a> in file <code>mptcp.py</code>.</p>
+</body>
+</html>

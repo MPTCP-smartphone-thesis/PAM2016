@@ -27,13 +27,8 @@ code > span.er { color: #ff0000; font-weight: bold; }
   </style>
 </head>
 <body>
-<h1 id="unused-subflows">Unused Subflows</h1>
-<p><strong>Graph file</strong>: <a href="https://github.com/multipath-tcp/mptcp-analysis-scripts/blob/master/scripts_graph/overhead_stats.py">overhead_stats.py</a><br /><strong>Main fields</strong>:</p>
-<pre class="sourceCode python"><code class="sourceCode python">conn.flows[*].attr[co.C2S].get[co.BYTES]  <span class="co"># Unique data bytes sent on a subflow from smartphone to proxy</span>
-conn.flows[*].attr[co.S2C].get[co.BYTES]  <span class="co"># Unique data bytes sent on a subflow from proxy to smartphone</span></code></pre>
-<h3 id="definition-of-unused-subflow">Definition of unused subflow</h3>
-<p>A subflow is considered as unused if no data bytes were carried on this flow on both data flows (smartphone to proxy and proxy to smartphone).</p>
-<h3 id="additional-information">Additional information</h3>
-<p>To avoid under-estimating the phenomenon, only connections having at least two subflows are taken into account.<br />In addition to counting the number of unused subflows, the file <code>overhead_stats.py</code> also prints other numbers (# of backup subflows, # of subflows with the better RTT,...) trying to explain the obtained result.</p>
+<h1 id="percentage-of-data-on-non-initial-suflow-with-connection-experiencing-handover">Percentage of Data on Non-Initial Suflow with Connection Experiencing Handover</h1>
+<p><strong>Graph file</strong>: <a href="https://github.com/multipath-tcp/mptcp-analysis-scripts/blob/master/scripts_graph/not_initial_subflow_data_handover_cdf.py">not_initial_subflow_data_handover_cdf.py</a><br /><strong>Main fields</strong>:</p>
+<pre class="sourceCode python"><code class="sourceCode python"><span class="co"># TODO fill</span></code></pre>
 </body>
 </html>
