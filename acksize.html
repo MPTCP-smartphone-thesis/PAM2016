@@ -1,0 +1,78 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+  </style>
+</head>
+<body>
+<h1 id="multipath-tcp-acknowledgements">Multipath TCP Acknowledgements</h1>
+<p><strong>Graph file</strong>: <a href="https://github.com/multipath-tcp/mptcp-analysis-scripts/blob/master/scripts_graph/plot_acksize.py">plot_acksize.py</a></p>
+<h3 id="particularity-of-this-script">Particularity of this script</h3>
+<p>From all our results, this one does not rely on the statistic files discussed in other results.<br />Rather, it relies on two pickled dictionaries in <code>acksize</code> and <code>acksize_tcp</code> folders, obtained during the preprocessing of the trace.<br />The plot shows a weighted CDF over the ACKed bytes, and the code below shows how it is generated.</p>
+<pre class="sourceCode python"><code class="sourceCode python">sums_acks = {MPTCP: {}, TCP: {}}
+multiflow_conn = <span class="dt">set</span>()
+
+<span class="co"># First manage the TCP ACKS</span>
+<span class="kw">for</span> fname, acks_fname in acks[TCP].iteritems():
+    <span class="kw">for</span> conn_id, acks_conn in acks_fname[co.S2C].iteritems():
+        <span class="co"># Only take connections with ACKs on at least 2 subflows</span>
+        <span class="kw">if</span> <span class="dt">len</span>(acks_conn) &gt;= <span class="dv">2</span>:
+            multiflow_conn.add((fname, conn_id))
+            <span class="kw">for</span> flow_id, acks_flow in acks_conn.iteritems():
+                <span class="kw">for</span> value_ack, nb_ack in acks_flow.iteritems():
+                    <span class="co"># Manage the case where this is the first ack of this size seen</span>
+                    <span class="kw">if</span> value_ack not in sums_acks[TCP]:
+                        sums_acks[TCP][value_ack] = nb_ack
+                    <span class="kw">else</span>:
+                        sums_acks[TCP][value_ack] += nb_ack
+
+<span class="co"># Then the MPTCP ones</span>
+<span class="kw">for</span> fname, acks_fname in acks[MPTCP].iteritems():
+    <span class="kw">for</span> conn_id, acks_conn in acks_fname[co.S2C].iteritems():
+        <span class="co"># Filter single_flow MPTCP connections</span>
+        <span class="kw">if</span> (fname, conn_id) in multiflow_conn:
+            <span class="kw">for</span> value_ack, nb_ack in acks_conn.iteritems():
+                <span class="kw">if</span> value_ack not in sums_acks[MPTCP]:
+                    sums_acks[MPTCP][value_ack] = nb_ack
+                <span class="kw">else</span>:
+                    sums_acks[MPTCP][value_ack] += nb_ack
+
+<span class="co"># Now generate the plot</span>
+to_plot = {MPTCP: [], TCP: []}
+<span class="kw">for</span> protocol, acks_protocol in sums_acks.iteritems():
+    total_bytes = <span class="dv">0</span>
+    <span class="kw">for</span> value_ack, nb_ack in <span class="dt">sorted</span>(acks_protocol.iteritems()):
+        total_bytes += value_ack * nb_ack
+        to_plot[protocol].append([value_ack, total_bytes])
+
+    <span class="co"># Then set values between 0 and 1 to have the weighted CDF</span>
+    <span class="kw">for</span> i in <span class="dt">range</span>(<span class="dv">0</span>, <span class="dt">len</span>(to_plot[protoco])):
+        to_plot[protocol][i][<span class="dv">1</span>] = (to_plot[protocol][i][<span class="dv">1</span>] + <span class="fl">0.0</span>) / total_bytes
+
+<span class="co"># Then plot to_plot</span></code></pre>
+<h3 id="additional-information">Additional information</h3>
+<p>The MPTCP ACK sizes are extracted with <a href="https://bitbucket.org/bhesmans/mptcptrace">mptcptrace</a>, and the TCP ACK sizes are extracted by a traversal of the trace with <a href="https://github.com/kbandla/dpkt">dpkt</a>. For more information about the TCP ACK size extraction, see the <a href="https://github.com/multipath-tcp/mptcp-analysis-scripts/blob/master/tcp.py">tcp.py</a> file, and in particular the <a href="https://github.com/multipath-tcp/mptcp-analysis-scripts/blob/master/tcp.py#L535"><code>compute_tcp_acks_retrans()</code></a> method.</p>
+</body>
+</html>

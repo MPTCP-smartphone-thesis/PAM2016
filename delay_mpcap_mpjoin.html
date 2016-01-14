@@ -1,0 +1,37 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+  </style>
+</head>
+<body>
+<h1 id="delay-between-mp_capable-and-mp_join">Delay between <code>MP_CAPABLE</code> and <code>MP_JOIN</code></h1>
+<p><strong>Graph file</strong>: <a href="https://github.com/multipath-tcp/mptcp-analysis-scripts/blob/master/scripts_graph/delay_mpcapable_mpjoin.py">delay_mpcapable_mpjoin.py</a><br /><strong>Main fields</strong>:</p>
+<pre class="sourceCode python"><code class="sourceCode python">conn.flows[*].attr[co.START]   <span class="co"># Time of the first packet of the subflow seen by tstat</span></code></pre>
+<h3 id="additional-information">Additional information</h3>
+<p>First, on a given connection, the script finds the first established subflow (typically <code>conn.flows[0]</code>).<br />Indeed, the first subflow of a Multipath TCP connection contains the <code>MP_CAPABLE</code> option in all packets of the three-way handshake.<br />Then, for all additional subflows (i.e., not the first one), it computes the delta between the first packet of a new subflow (with <code>MP_JOIN</code> option in SYNs) and the first packet of the connection.<br />The deltas are then collected and plotted on a CDF.</p>
+<p>Notice that for the &quot;Second subflows&quot; curve, only the additional subflow with the lowest delta is considered.</p>
+</body>
+</html>
