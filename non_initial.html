@@ -29,6 +29,8 @@ code > span.er { color: #ff0000; font-weight: bold; }
 <body>
 <h1 id="percentage-of-data-on-non-initial-suflow-with-connection-experiencing-handover">Percentage of Data on Non-Initial Suflow with Connection Experiencing Handover</h1>
 <p><strong>Graph file</strong>: <a href="https://github.com/multipath-tcp/mptcp-analysis-scripts/blob/master/scripts_graph/not_initial_subflow_data_handover_cdf.py">not_initial_subflow_data_handover_cdf.py</a><br /><strong>Main fields</strong>:</p>
-<pre class="sourceCode python"><code class="sourceCode python"><span class="co"># TODO fill</span></code></pre>
+<pre class="sourceCode python"><code class="sourceCode python">conn.flows[*].attr[co.START]  <span class="co"># Start time of the subflow</span>
+conn.flows[*].attr[co.S2C][co.BYTES]  <span class="co"># Unique bytes sent on subflow from proxy to smartphone</span></code></pre>
+<p>The process is quite simple, since it requires to sum the number of unique bytes sent on the non-initial subflows, and divides this result by the total number of unique bytes sent on all subflows.<br />The initial subflow can be easily identified either by looking at its starting time (the earliest one) or by its identifier (it is typically conn.flows[0]).</p>
 </body>
 </html>
